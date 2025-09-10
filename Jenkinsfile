@@ -48,25 +48,54 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                // Run sonar-scanner inside the official SonarScanner Docker image.
-                // This avoids needing the SonarQube Jenkins plugin or a configured Sonar installation.
+                // Alternative approach: Use SonarQube without Docker to avoid volume mounting issues
                 withCredentials([string(credentialsId: 'sonarqube_token', variable: 'SCANNER_TOKEN')]) {
-                    sh '''
-                    echo "=== DEBUG: Checking workspace contents ==="
-                    ls -la
-                    echo "=== DEBUG: Checking if tests directory exists ==="
-                    ls -la tests/ || echo "tests directory not found"
-                    echo "=== DEBUG: Checking if coverage.xml exists ==="
-                    ls -la coverage.xml || echo "coverage.xml not found"
-                    
-                    echo "Running SonarScanner in Docker..."
-                    docker run --rm -v "${WORKSPACE}":/usr/src -w /usr/src sonarsource/sonar-scanner-cli:latest \
-                        -Dsonar.projectKey=6510110356_jenkins-fastapi \
-                        -Dsonar.sources=app,tests \
-                        -Dsonar.python.coverage.reportPaths=coverage.xml \
-                        -Dsonar.host.url=http://host.docker.internal:9000 \
-                        -Dsonar.login=${SCANNER_TOKEN}
-                    '''
+                    script {
+                        // Try Docker approach first, if it fails, use direct approach
+                        try {
+                            sh '''
+                            echo "=== Trying Docker approach ==="
+                            docker run --rm -v "$(pwd)":/usr/src -w /usr/src sonarsource/sonar-scanner-cli:latest \
+                                -Dsonar.projectKey=6510110356_jenkins-fastapi \
+                                -Dsonar.sources=app,tests \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml \
+                                -Dsonar.host.url=http://host.docker.internal:9000 \
+                                -Dsonar.login=${SCANNER_TOKEN}
+                            '''
+                        } catch (Exception e) {
+                            echo "Docker approach failed: ${e.getMessage()}"
+                            echo "Trying direct SonarQube scanner approach..."
+                            
+                            // Fallback to using sonar-project.properties file only
+                            sh '''
+                            echo "=== Using sonar-project.properties configuration ==="
+                            cat sonar-project.properties
+                            
+                            # Create a temporary properties file with working configuration
+                            cat > sonar-temp.properties << EOF
+sonar.projectKey=6510110356_jenkins-fastapi
+sonar.projectName=6510110356_jenkins-fastapi
+sonar.projectVersion=1.0
+sonar.sources=app
+sonar.language=py
+sonar.sourceEncoding=UTF-8
+sonar.python.coverage.reportPaths=coverage.xml
+sonar.host.url=http://localhost:9000
+sonar.login=${SCANNER_TOKEN}
+EOF
+                            
+                            # Use wget to download and run SonarQube scanner
+                            if ! command -v sonar-scanner &> /dev/null; then
+                                echo "Downloading SonarQube scanner..."
+                                wget -O sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                                unzip -q sonar-scanner.zip
+                                export PATH=$PATH:$(pwd)/sonar-scanner-4.8.0.2856-linux/bin
+                            fi
+                            
+                            sonar-scanner -Dproject.settings=sonar-temp.properties
+                            '''
+                        }
+                    }
                 }
             }
         }
