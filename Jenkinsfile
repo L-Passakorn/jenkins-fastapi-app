@@ -1,21 +1,12 @@
 pipeline {
     agent any
 
-    environment {
-        SONAR_TOKEN = credentials('sonar-token')  // SonarQube token
-    }
-
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/L-Passakorn/jenkins-fastapi-app.git'
-            }
-        }
-
         stage('Setup Python & Install Dependencies') {
             agent {
                 docker {
-                    image 'python-docker:3.11'
+                    image 'python:3.11-slim'
+                    args '-u root:root'
                 }
             }
             steps {
@@ -32,7 +23,8 @@ pipeline {
         stage('Run Tests & Generate Coverage') {
             agent {
                 docker {
-                    image 'python-docker:3.11'
+                    image 'python:3.11-slim'
+                    args '-u root:root'
                 }
             }
             steps {
@@ -45,13 +37,24 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                sh '''
-                    docker run --rm \
-                      -e SONAR_HOST_URL=http://172.17.0.3:9000 \
-                      -e SONAR_LOGIN=sqp_bb179585d925726bf4f97fda2b869cf4b7975a7b \
-                      -v $(pwd):/usr/src \
-                      sonarsource/sonar-scanner-cli  
-                '''
+                script {
+                    withSonarQubeEnv('sonar-scanner') {
+                        withCredentials([string(credentialsId: 'sonar-token', variable: 'SCANNER_TOKEN')]) {
+                            sh '''
+                            echo "SUCCESS: SCANNER_TOKEN is set."
+                            export SONAR_TOKEN="${SCANNER_TOKEN}"
+                            
+                            # Use the SonarQube scanner tool configured in Jenkins
+                            sonar-scanner \
+                                -Dsonar.host.url="${SONAR_HOST_URL}" \
+                                -Dsonar.projectKey=6510110356_jenkins-fastapi \
+                                -Dsonar.sources=app \
+                                -Dsonar.tests=tests \
+                                -Dsonar.python.coverage.reportPaths=coverage.xml
+                            '''
+                        }
+                    }
+                }
             }
         }
 
