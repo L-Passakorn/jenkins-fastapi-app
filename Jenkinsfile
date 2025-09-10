@@ -62,8 +62,7 @@ pipeline {
                     echo "Running SonarScanner in Docker..."
                     docker run --rm -v "${WORKSPACE}":/usr/src -w /usr/src sonarsource/sonar-scanner-cli:latest \
                         -Dsonar.projectKey=6510110356_jenkins-fastapi \
-                        -Dsonar.sources=app \
-                        -Dsonar.tests=tests \
+                        -Dsonar.sources=app,tests \
                         -Dsonar.python.coverage.reportPaths=coverage.xml \
                         -Dsonar.host.url=http://host.docker.internal:9000 \
                         -Dsonar.login=${SCANNER_TOKEN}
