@@ -164,7 +164,18 @@ EOF
                 }
             }
             steps {
-                sh 'docker build -t fastapi-app:latest .'
+                sh '''
+                echo "=== Cleaning up before Docker build ==="
+                rm -rf .pytest_cache || true
+                rm -rf __pycache__ || true
+                rm -rf .sonar || true
+                rm -rf sonar-scanner* || true
+                rm -f sonar-scanner.zip || true
+                rm -f sonar-temp.properties || true
+                
+                echo "=== Building Docker image ==="
+                docker build -t fastapi-app:latest .
+                '''
             }
         }
 

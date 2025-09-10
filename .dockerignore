@@ -1,0 +1,23 @@
+# Ignore cache and temporary files
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.venv
+env/
+venv/
+.coverage
+coverage.xml
+*.log
+.git/
+.gitignore
+.dockerignore
+README.md
+.scannerwork/
+sonar-scanner*/
+sonar-scanner.zip
+sonar-temp.properties
+.sonar/
