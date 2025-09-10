@@ -160,7 +160,7 @@ EOF
             agent {
                 docker {
                     image 'docker:19.03.13'
-                    args "-w /workspace -v \${pwd()}:/workspace -v /var/run/docker.sock:/var/run/docker.sock"
+                    args "-v /var/run/docker.sock:/var/run/docker.sock"
                 }
             }
             steps {
@@ -172,7 +172,7 @@ EOF
             agent {
                 docker {
                     image 'docker:19.03.13'
-                    args "-w /workspace -v \${pwd()}:/workspace -v /var/run/docker.sock:/var/run/docker.sock"
+                    args "-v /var/run/docker.sock:/var/run/docker.sock"
                 }
             }
             steps {
