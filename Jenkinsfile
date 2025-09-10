@@ -8,7 +8,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/wKritwara/Jenkins_Demopipe01.git'
+                git branch: 'main', url: 'https://github.com/L-Passakorn/jenkins-fastapi-app.git'
             }
         }
 
@@ -48,7 +48,7 @@ pipeline {
                 sh '''
                     docker run --rm \
                       -e SONAR_HOST_URL=http://172.17.0.3:9000 \
-                      -e SONAR_LOGIN=sqp_eb7b5bb7e277b631cb405148bd3a50bf6c239a6c \
+                      -e SONAR_LOGIN=sqp_bb179585d925726bf4f97fda2b869cf4b7975a7b \
                       -v $(pwd):/usr/src \
                       sonarsource/sonar-scanner-cli  
                 '''
