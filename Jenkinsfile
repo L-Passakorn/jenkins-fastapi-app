@@ -157,12 +157,6 @@ EOF
         }
 
         stage('Build Docker Image') {
-            agent {
-                docker {
-                    image 'docker:19.03.13'
-                    args "-v /var/run/docker.sock:/var/run/docker.sock"
-                }
-            }
             steps {
                 sh '''
                 echo "=== Cleaning up before Docker build ==="
@@ -172,6 +166,8 @@ EOF
                 rm -rf sonar-scanner* || true
                 rm -f sonar-scanner.zip || true
                 rm -f sonar-temp.properties || true
+                find . -name "*.pyc" -delete || true
+                find . -name "__pycache__" -type d -exec rm -rf {} + || true
                 
                 echo "=== Building Docker image ==="
                 docker build -t fastapi-app:latest .
@@ -180,17 +176,14 @@ EOF
         }
 
         stage('Deploy Container') {
-            agent {
-                docker {
-                    image 'docker:19.03.13'
-                    args "-v /var/run/docker.sock:/var/run/docker.sock"
-                }
-            }
             steps {
                 sh '''
+                echo "=== Deploying FastAPI container ==="
                 docker stop fastapi_app || true
                 docker rm fastapi_app || true
                 docker run -d -p 8000:8000 --name fastapi_app fastapi-app:latest
+                echo "=== Container deployed successfully ==="
+                docker ps | grep fastapi_app || echo "Container not running"
                 '''
             }
         }
