@@ -75,6 +75,25 @@ pipeline {
                             cat sonar-project.properties
                             
                             # Create a temporary properties file with working configuration
+                            # Try different host URLs for Docker-to-host communication
+                            echo "=== Testing SonarQube connectivity ==="
+                            
+                            # Test different host URLs
+                            SONAR_HOST=""
+                            for host in "host.docker.internal" "172.17.0.1" "gateway.docker.internal" "localhost"; do
+                                echo "Testing http://$host:9000..."
+                                if curl -s --connect-timeout 5 "http://$host:9000" >/dev/null 2>&1; then
+                                    SONAR_HOST="http://$host:9000"
+                                    echo "✓ SonarQube found at $SONAR_HOST"
+                                    break
+                                fi
+                            done
+                            
+                            if [ -z "$SONAR_HOST" ]; then
+                                echo "⚠ Could not find SonarQube server. Trying host.docker.internal as default..."
+                                SONAR_HOST="http://host.docker.internal:9000"
+                            fi
+                            
                             cat > sonar-temp.properties << EOF
 sonar.projectKey=6510110356_jenkins-fastapi
 sonar.projectName=6510110356_jenkins-fastapi
@@ -83,7 +102,7 @@ sonar.sources=app
 sonar.language=py
 sonar.sourceEncoding=UTF-8
 sonar.python.coverage.reportPaths=coverage.xml
-sonar.host.url=http://localhost:9000
+sonar.host.url=$SONAR_HOST
 sonar.token=${SCANNER_TOKEN}
 EOF
                             
