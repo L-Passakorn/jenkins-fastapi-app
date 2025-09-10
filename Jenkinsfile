@@ -39,19 +39,21 @@ pipeline {
             steps {
                 script {
                     withSonarQubeEnv('sonar-scanner') {
-                        withCredentials([string(credentialsId: 'sonar-token', variable: 'SCANNER_TOKEN')]) {
-                            sh '''
+                        withCredentials([string(credentialsId: 'sonarqube_token', variable: 'SCANNER_TOKEN')]) {
+                            sh """
                             echo "SUCCESS: SCANNER_TOKEN is set."
-                            export SONAR_TOKEN="${SCANNER_TOKEN}"
-                            
-                            # Use the SonarQube scanner tool configured in Jenkins
-                            sonar-scanner \
-                                -Dsonar.host.url="${SONAR_HOST_URL}" \
-                                -Dsonar.projectKey=6510110356_jenkins-fastapi \
-                                -Dsonar.sources=app \
-                                -Dsonar.tests=tests \
+
+                            # Use SonarQube scanner Docker image
+                            docker run --rm \\
+                                -e SONAR_HOST_URL=\"${SONAR_HOST_URL}\" \\
+                                -e SONAR_LOGIN=\"${SCANNER_TOKEN}\" \\
+                                -v \"\$(pwd):/usr/src\" \\
+                                sonarsource/sonar-scanner-cli \\
+                                -Dsonar.projectKey=6510110356_jenkins-fastapi \\
+                                -Dsonar.sources=app \\
+                                -Dsonar.tests=tests \\
                                 -Dsonar.python.coverage.reportPaths=coverage.xml
-                            '''
+                            """
                         }
                     }
                 }
