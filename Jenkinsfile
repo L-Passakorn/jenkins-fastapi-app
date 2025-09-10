@@ -1,6 +1,25 @@
 pipeline {
     agent any // This uses the main Jenkins agent for all general tasks
     
+    environment {
+        APP_PORT = "${params.APP_PORT ?: '8000'}"
+        ENVIRONMENT = "${params.ENVIRONMENT ?: 'development'}"
+        CONTAINER_NAME = "fastapi_app_${ENVIRONMENT}"
+    }
+    
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['development', 'staging', 'production'],
+            description: 'Select deployment environment'
+        )
+        string(
+            name: 'APP_PORT',
+            defaultValue: '8000',
+            description: 'Port to expose the application'
+        )
+    }
+    
     stages {
         stage('Clean Workspace') {
             steps {
@@ -104,6 +123,8 @@ sonar.sourceEncoding=UTF-8
 sonar.python.coverage.reportPaths=coverage.xml
 sonar.host.url=$SONAR_HOST
 sonar.token=${SCANNER_TOKEN}
+sonar.qualitygate.wait=true
+sonar.qualitygate.timeout=300
 EOF
                             
                             # Check if sonar-scanner is available
@@ -156,6 +177,32 @@ EOF
             }
         }
 
+        stage('SonarQube Quality Gate') {
+            steps {
+                script {
+                    echo "=== Waiting for SonarQube Quality Gate ==="
+                    try {
+                        timeout(time: 5, unit: 'MINUTES') {
+                            def qg = waitForQualityGate()
+                            if (qg.status != 'OK') {
+                                echo "Quality Gate failed: ${qg.status}"
+                                echo "Quality Gate details: ${qg}"
+                                // You can choose to fail the build or continue
+                                // error "Pipeline aborted due to quality gate failure: ${qg.status}"
+                                currentBuild.result = 'UNSTABLE'
+                            } else {
+                                echo "Quality Gate passed: ${qg.status}"
+                            }
+                        }
+                    } catch (Exception e) {
+                        echo "Quality Gate check failed or timed out: ${e.getMessage()}"
+                        echo "Continuing with build..."
+                        currentBuild.result = 'UNSTABLE'
+                    }
+                }
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh '''
@@ -179,11 +226,24 @@ EOF
             steps {
                 sh '''
                 echo "=== Deploying FastAPI container ==="
-                docker stop fastapi_app || true
-                docker rm fastapi_app || true
-                docker run -d -p 8000:8000 --name fastapi_app fastapi-app:latest
+                echo "Environment: ${ENVIRONMENT}"
+                echo "Port: ${APP_PORT}"
+                echo "Container Name: ${CONTAINER_NAME}"
+                
+                # Stop and remove existing container if it exists
+                docker stop ${CONTAINER_NAME} || true
+                docker rm ${CONTAINER_NAME} || true
+                
+                # Deploy new container with environment-specific settings
+                docker run -d \
+                    -p ${APP_PORT}:8000 \
+                    --name ${CONTAINER_NAME} \
+                    -e ENVIRONMENT=${ENVIRONMENT} \
+                    fastapi-app:latest
+                
                 echo "=== Container deployed successfully ==="
-                docker ps | grep fastapi_app || echo "Container not running"
+                docker ps | grep ${CONTAINER_NAME} || echo "Container not running"
+                echo "Application available at: http://localhost:${APP_PORT}"
                 '''
             }
         }
