@@ -52,12 +52,15 @@ pipeline {
                 // This avoids needing the SonarQube Jenkins plugin or a configured Sonar installation.
                 withCredentials([string(credentialsId: 'sonarqube_token', variable: 'SCANNER_TOKEN')]) {
                     sh '''
+                    echo "=== DEBUG: Checking workspace contents ==="
+                    ls -la
+                    echo "=== DEBUG: Checking if tests directory exists ==="
+                    ls -la tests/ || echo "tests directory not found"
+                    echo "=== DEBUG: Checking if coverage.xml exists ==="
+                    ls -la coverage.xml || echo "coverage.xml not found"
+                    
                     echo "Running SonarScanner in Docker..."
                     docker run --rm -v "${WORKSPACE}":/usr/src -w /usr/src sonarsource/sonar-scanner-cli:latest \
-                        -Dsonar.projectKey=6510110356_jenkins-fastapi \
-                        -Dsonar.sources=app \
-                        -Dsonar.tests=tests \
-                        -Dsonar.python.coverage.reportPaths=coverage.xml \
                         -Dsonar.host.url=http://host.docker.internal:9000 \
                         -Dsonar.login=${SCANNER_TOKEN}
                     '''
