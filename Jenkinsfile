@@ -113,15 +113,15 @@ EOF
                                 # Try curl first, then wget
                                 if command -v curl &> /dev/null; then
                                     echo "Using curl to download..."
-                                    curl -o sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                                    curl -o sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
                                 elif command -v wget &> /dev/null; then
                                     echo "Using wget to download..."
-                                    wget -O sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-4.8.0.2856-linux.zip
+                                    wget -O sonar-scanner.zip https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-5.0.1.3006-linux.zip
                                 else
                                     echo "Neither curl nor wget available. Trying alternative approach..."
                                     # Use the SonarQube Docker image but run it differently
                                     docker run --rm \
-                                        -e SONAR_HOST_URL=http://host.docker.internal:9000 \
+                                        -e SONAR_HOST_URL="$SONAR_HOST" \
                                         -e SONAR_TOKEN=${SCANNER_TOKEN} \
                                         -v "$(pwd)":/usr/src \
                                         --workdir /usr/src \
@@ -133,12 +133,12 @@ EOF
                                 # Extract and use the scanner
                                 if [ -f sonar-scanner.zip ]; then
                                     unzip -q sonar-scanner.zip
-                                    export PATH=$PATH:$(pwd)/sonar-scanner-4.8.0.2856-linux/bin
+                                    export PATH=$PATH:$(pwd)/sonar-scanner-5.0.1.3006-linux/bin
                                     sonar-scanner -Dproject.settings=sonar-temp.properties
                                 else
                                     echo "Failed to download scanner, trying Docker fallback..."
                                     docker run --rm \
-                                        -e SONAR_HOST_URL=http://host.docker.internal:9000 \
+                                        -e SONAR_HOST_URL="$SONAR_HOST" \
                                         -e SONAR_TOKEN=${SCANNER_TOKEN} \
                                         -v "$(pwd)":/usr/src \
                                         --workdir /usr/src \
